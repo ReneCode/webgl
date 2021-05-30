@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { BaseNode, LineNode } from "./Node";
 
-const style = { height: 550 };
+const style = { height: 650 };
 class Scene extends React.Component {
   root: HTMLDivElement | undefined;
   scene: THREE.Scene | undefined;
@@ -12,8 +12,10 @@ class Scene extends React.Component {
   controls: any;
   requestId: number = 0;
 
-  viewSize: number = 900;
+  viewSize: number = 1000;
   ascpectRatio: number = 1;
+  clientWidth: number = 1;
+  clientHeight: number = 1;
 
   nodes: BaseNode[] = [];
 
@@ -33,15 +35,21 @@ class Scene extends React.Component {
     window.removeEventListener("wheel", this.handleWheel);
   }
 
+  getClientSize = () => {
+    if (this.root) {
+      this.clientWidth = this.root.clientWidth;
+      this.clientHeight = this.root.clientHeight;
+      this.ascpectRatio = this.clientWidth / this.clientHeight;
+    }
+  };
+
   sceneSetup = () => {
     if (!this.root) {
       return;
     }
-    const width = this.root.clientWidth;
-    const height = this.root.clientHeight;
+    this.getClientSize();
 
     this.viewSize = 110;
-    this.ascpectRatio = width / height;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color("#eee");
@@ -50,7 +58,6 @@ class Scene extends React.Component {
     this.scene.add(light);
 
     const viewPort = {
-      aspectRatio: width / height,
       left: (-this.ascpectRatio * this.viewSize) / 2,
       right: (this.ascpectRatio * this.viewSize) / 2,
       top: this.viewSize / 2,
@@ -71,7 +78,7 @@ class Scene extends React.Component {
     // this.controls = new OrbitControls(this.camera, this.root);
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setSize(width, height);
+    this.renderer.setSize(this.clientWidth, this.clientHeight);
     this.root.appendChild(this.renderer.domElement);
   };
 
@@ -91,11 +98,13 @@ class Scene extends React.Component {
     if (!this.scene || !this.root || !this.renderer || !this.camera) {
       return;
     }
-    const width = this.root.clientWidth;
-    const height = this.root.clientHeight;
-    this.ascpectRatio = width / height;
+    this.getClientSize();
+    this.renderer.setSize(this.clientWidth, this.clientHeight);
 
-    this.renderer.setSize(width, height);
+    this.camera.left = (-this.ascpectRatio * this.viewSize) / 2;
+    this.camera.right = (this.ascpectRatio * this.viewSize) / 2;
+    this.camera.top = this.viewSize / 2;
+    this.camera.bottom = -this.viewSize / 2;
     this.camera.updateProjectionMatrix();
 
     this.renderGraphic();
@@ -119,7 +128,12 @@ class Scene extends React.Component {
     } else {
       // panning
       if (this.camera) {
+        const { x, y } = this.screenToWorld(event.deltaX, event.deltaY);
+        console.log(x, y);
         const deltaDevice = new THREE.Vector3(event.deltaX, -event.deltaY, 0);
+        deltaDevice.multiplyScalar(0.3);
+        // const deltaDevice = new THREE.Vector3(x, -y, 0);
+        deltaDevice.multiplyScalar(1 / this.camera.zoom);
         this.camera.position.add(deltaDevice);
         this.renderGraphic();
       }
@@ -180,6 +194,23 @@ class Scene extends React.Component {
     this.renderer.render(this.scene, this.camera);
   };
 
+  //https://stackoverflow.com/questions/13055214/mouse-canvas-x-y-to-three-js-world-x-y-z
+  screenToWorld = (x: number, y: number): { x: number; y: number } => {
+    if (!this.camera) {
+      return { x, y };
+    }
+    let vec = new THREE.Vector3(
+      (x / this.clientWidth) * 2 - 1,
+      -(y / this.clientHeight) * 2 + 1,
+      0
+    );
+    vec.project(this.camera);
+
+    let nullVec = new THREE.Vector3(0, 0, 0);
+    nullVec.project(this.camera);
+    return { x: vec.x - nullVec.x, y: vec.y - nullVec.y };
+  };
+
   addLineNode = () => {
     const line = new LineNode();
     line.color = "#4f4";
@@ -194,7 +225,7 @@ class Scene extends React.Component {
   };
 
   onAddElement = () => {
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 100; i++) {
       this.addLineNode();
     }
 
