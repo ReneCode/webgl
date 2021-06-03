@@ -5,7 +5,7 @@ import { LineNode } from "./Node";
 export const createLine = (line: LineNode) => {
   const material = new THREE.MeshBasicMaterial({
     color: line.color,
-    wireframe: true,
+    wireframe: false,
   });
 
   if (line.width > 0) {

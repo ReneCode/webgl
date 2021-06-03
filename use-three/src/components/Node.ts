@@ -5,8 +5,8 @@ export interface BaseNode {
 
 export class LineNode implements BaseNode {
   type = "LINE";
-  color = "#6e2";
-  width = 0.1;
+  color = "#dd2222";
+  width = 1;
   x1 = 0;
   y1 = 0;
   x2 = 50;
