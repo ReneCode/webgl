@@ -1,6 +1,6 @@
 import React from "react";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { createLine } from "./graphic";
 import { BaseNode, LineNode } from "./Node";
 
 const style = { height: 650 };
@@ -24,6 +24,10 @@ class Scene extends React.Component {
   componentDidMount() {
     this.sceneSetup();
     this.addCustomObjects();
+
+    this.createNodes();
+    this.createScene();
+
     this.renderGraphic();
     // this.startAnnimationLoop();
     window.addEventListener("resize", this.handleResize);
@@ -164,26 +168,96 @@ class Scene extends React.Component {
     }
   };
 
+  createNodes = () => {};
+
   createScene = () => {
     if (!this.scene) {
       return;
     }
 
-    const addLine = (line: LineNode) => {
-      let points = [];
-      points.push(
-        new THREE.Vector3(line.x1, line.y1, 0),
-        new THREE.Vector3(line.x2, line.y2, 0)
-      );
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const material = new THREE.LineBasicMaterial({ color: line.color });
-      this.scene?.add(new THREE.Line(geometry, material));
+    const addLine = (node: LineNode) => {
+      if (false) {
+        let points = [];
+
+        points.push(
+          new THREE.Vector2(5, 6),
+          new THREE.Vector2(15, 16),
+          new THREE.Vector2(15, 26),
+          new THREE.Vector2(5, 6)
+          // new THREE.Vector3(3, 2, 0),
+          // new THREE.Vector3(13, 12, 0),
+          // new THREE.Vector3(12, 23, 0),
+          // new THREE.Vector3(2, 8, 0)
+        );
+
+        let geometry = new THREE.BufferGeometry().setFromPoints(points);
+        console.log(geometry);
+        // geometry = new THREE.BoxGeometry(40, 5, 6);
+
+        const material = new THREE.MeshBasicMaterial({
+          color: "#e33",
+          wireframe: true,
+        });
+        const obj = new THREE.Mesh(geometry, material);
+        this.scene?.add(obj);
+      }
+
+      if (true) {
+        var material = new THREE.MeshBasicMaterial({
+          color: 0xcc2266,
+          wireframe: true,
+        });
+
+        const v1 = new THREE.Vector2(node.x2 - node.x1, node.y2 - node.y1);
+        v1.normalize();
+        v1.multiplyScalar(node.width / 2);
+        const vdX = v1.y;
+
+        const vdY = -v1.x;
+
+        console.log(node, vdX, vdY);
+        const shape = new THREE.Shape();
+        shape.moveTo(node.x1 + vdX, node.y1 + vdY);
+        shape.lineTo(node.x2 + vdX, node.y2 + vdY);
+        shape.lineTo(node.x2 - vdX, node.y2 - vdY);
+        shape.lineTo(node.x1 - vdX, node.y1 - vdY);
+
+        let geometry = new THREE.ShapeGeometry(shape);
+        const mesh = new THREE.Mesh(geometry, material);
+        this.scene?.add(mesh);
+      }
+
+      // const thickLine = new THREE.LineSegments(geometry, material);
+
+      // let width = line.x2 - line.x1;
+      // if (width < 0) {
+      //   width = -width;
+      // }
+      // let height = line.y2 - line.y1;
+      // if (height < 0) {
+      //   height = -height;
+      // }
+
+      // const plane = new THREE.PlaneGeometry(width, height);
+      // const mesh = new THREE.Mesh(plane, material);
+      // mesh.position.set(line.x1, line.y1, 0);
+
+      // this.scene?.add(mesh);
     };
     for (let node of this.nodes) {
       if (node.type === "LINE") {
-        addLine(node as LineNode);
+        this.scene.add(createLine(node as LineNode));
       }
     }
+    const l = new LineNode();
+    l.x1 = 0;
+    l.y1 = 0;
+    l.x2 = 60;
+    l.y2 = 20;
+    l.width = 10;
+    // addLine(l);
+
+    this.scene.add(createLine(l));
   };
 
   renderGraphic = () => {
@@ -224,8 +298,13 @@ class Scene extends React.Component {
     this.nodes.push(line);
   };
 
+  draw = () => {
+    this.createScene();
+    this.renderGraphic();
+  };
+
   onAddElement = () => {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1000; i++) {
       this.addLineNode();
     }
 
