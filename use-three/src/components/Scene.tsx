@@ -1,9 +1,10 @@
-import React from "react";
+import React, { MouseEvent } from "react";
 import * as THREE from "three";
-import { createLine } from "./graphic";
-import { BaseNode, LineNode } from "./Node";
+import { createSceneLine, exchangeSceneObject } from "./graphic";
+import { BaseNode, LineNode, createRandomLineNode } from "./Node";
 
 const style = { height: 650 };
+
 class Scene extends React.Component {
   root: HTMLDivElement | undefined;
   scene: THREE.Scene | undefined;
@@ -11,6 +12,8 @@ class Scene extends React.Component {
   renderer: THREE.WebGLRenderer | undefined;
   controls: any;
   requestId: number = 0;
+
+  state = { mouseX: 0, mouseY: 0, worldX: 0, worldY: 0 };
 
   viewSize: number = 1000;
   ascpectRatio: number = 1;
@@ -132,7 +135,7 @@ class Scene extends React.Component {
     } else {
       // panning
       if (this.camera) {
-        const { x, y } = this.screenToWorld(event.deltaX, event.deltaY);
+        // const { x, y } = this.screenToWorld(event.deltaX, event.deltaY);
         const deltaDevice = new THREE.Vector3(event.deltaX, -event.deltaY, 0);
         deltaDevice.multiplyScalar(0.3);
         // const deltaDevice = new THREE.Vector3(x, -y, 0);
@@ -168,8 +171,8 @@ class Scene extends React.Component {
   };
 
   createNodes = () => {
-    for (let i = 0; i < 1000; i++) {
-      this.addRandomLineNode();
+    for (let i = 0; i < 100; i++) {
+      this.nodes.push(createRandomLineNode());
     }
   };
 
@@ -178,9 +181,12 @@ class Scene extends React.Component {
       return;
     }
 
+    // this.scene.remove.apply(this.scene, this.scene.children);
     for (let node of this.nodes) {
       if (node.type === "LINE") {
-        this.scene.add(createLine(node as LineNode));
+        const obj = createSceneLine(node as LineNode);
+        console.log(obj);
+        this.scene.add(obj);
       }
     }
   };
@@ -203,27 +209,41 @@ class Scene extends React.Component {
       -(y / this.clientHeight) * 2 + 1,
       0
     );
-    vec.project(this.camera);
+    vec.unproject(this.camera);
 
-    let nullVec = new THREE.Vector3(0, 0, 0);
-    nullVec.project(this.camera);
-    return { x: vec.x - nullVec.x, y: vec.y - nullVec.y };
+    return { x: vec.x, y: vec.y };
   };
 
-  addRandomLineNode = () => {
-    const line = new LineNode();
-    line.color = "#4f4";
-    line.x1 = Math.random() * 200 + -100;
-    line.y1 = Math.random() * 100 + -50;
-    line.x2 = Math.random() * 200 + -100;
-    line.y2 = Math.random() * 100 + -50;
-    line.width = Math.random() * 2;
-    line.color = `rgb(${Math.floor(Math.random() * 255)},${Math.floor(
-      Math.random() * 255
-    )},${Math.floor(Math.random() * 255)})`;
-    this.nodes.push(line);
+  // MouseEventHandler<HTMLDivElement>
+  onMouseMove = (event: MouseEvent) => {
+    const mx = event.clientX - this.root!.offsetLeft;
+    const my = event.clientY - this.root!.offsetTop;
+
+    const { x: wx, y: wy } = this.screenToWorld(mx, my);
+
+    this.setState({ mouseX: mx, mouseY: my, worldX: wx, worldY: wy });
   };
 
+  onChangeLine = () => {
+    if (!this.scene) {
+      return;
+    }
+
+    const line = this.nodes[0] as LineNode;
+    line.x1 += 5;
+    line.y1 += 2;
+
+    const obj = createSceneLine(line);
+
+    // this.createScene();
+    exchangeSceneObject(this.scene, obj);
+
+    // const foundIdx = this.scene.children.findIndex((o) => o.id === oldTid);
+    // if (foundIdx >= 0) {
+    //   this.scene.children.splice(foundIdx, 1, obj);
+    // }
+    this.renderGraphic();
+  };
   // onAddElement = () => {
   //   for (let i = 0; i < 1000; i++) {
   //     this.addRandomLineNode();
@@ -246,16 +266,24 @@ class Scene extends React.Component {
   render() {
     return (
       <div>
-        {/* <span>
-          <button onClick={this.onAddElement}>add</button>
-          <button onClick={this.onMoveLeft}>{"<"}</button>
+        <span>
+          {this.state.mouseX} / {this.state.mouseY} / {this.state.worldX} /{" "}
+          {this.state.worldY}
+        </span>
+        <div>
+          <span>
+            <button onClick={this.onChangeLine}>change Line</button>
+            {/* <button onClick={this.onMoveLeft}>{"<"}</button>
           <button onClick={() => this.onZoom(1 / 1.1)}>{"zoom-in"}</button>
-          <button onClick={() => this.onZoom(1.1)}>{"zoom-out"}</button>
-        </span> */}
+        <button onClick={() => this.onZoom(1.1)}>{"zoom-out"}</button> */}
+          </span>
+        </div>
         <div
           style={style}
           ref={(ref) => (this.root = ref as HTMLDivElement)}
+          onMouseMove={this.onMouseMove}
         ></div>
+        <pre>{JSON.stringify(this.nodes, null, 2)}</pre>
       </div>
     );
   }
